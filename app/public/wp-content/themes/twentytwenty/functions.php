@@ -273,7 +273,7 @@ function twentytwenty_skip_link_focus_fix()
 			/^[A-z0-9_-]+$/.test(e) && (t = document.getElementById(e)) && (/^(?:a|select|input|button|textarea)$/i.test(t.tagName) || (t.tabIndex = -1), t.focus())
 		}, !1);
 	</script>
-<?php
+	<?php
 }
 
 /**
@@ -868,7 +868,7 @@ function enqueue_scripts()
 		'ajax_url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('crud_nonce')
 	));
 	wp_localize_script('load-career', 'ajax_object', array(
-		'ajax_url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('career_nonce')
+		'ajax_url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('career_nonce'), 'total_posts' => wp_count_posts('career')->publish
 	));
 }
 add_action('wp_enqueue_scripts', 'enqueue_scripts');
@@ -954,3 +954,49 @@ function load_career_content()
 }
 add_action('wp_ajax_load_career', 'load_career_content');
 add_action('wp_ajax_nopriv_load_career', 'load_career_content');
+
+function load_more_posts()
+{
+	// Check nonce for security
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'career_nonce')) {
+		wp_send_json_error('Invalid nonce');
+		wp_die();
+	}
+
+	$paged = intval($_POST['paged']);
+	$posts_per_page = get_option('posts_per_page');
+
+	$query = new WP_Query(array(
+		'post_type' => 'career',
+		'paged' => $paged,
+		'posts_per_page' => $posts_per_page,
+	));
+
+	if ($query->have_posts()) {
+		ob_start();
+		while ($query->have_posts()) {
+			$query->the_post();
+	?>
+			<a href="#" class="job-item" data-post-id="<?php the_ID(); ?>">
+				<article <?php post_class(); ?> id="post-<?php the_ID(); ?>">
+					<header class="entry-header">
+						<h2 class="h3 link-danger link-offset-3 link-underline link-underline-opacity-50"><?php the_title(); ?></h2>
+					</header>
+				</article>
+			</a>
+<?php
+		}
+		wp_reset_postdata();
+		$posts_html = ob_get_clean();
+		wp_send_json_success(array(
+			'posts' => $posts_html,
+			'total_posts' => wp_count_posts('career')->publish
+		));
+	} else {
+		wp_send_json_error('No more posts');
+	}
+
+	wp_die();
+}
+add_action('wp_ajax_load_more_posts', 'load_more_posts');
+add_action('wp_ajax_nopriv_load_more_posts', 'load_more_posts');
