@@ -6694,3 +6694,8 @@ a.to-the-top > * {
 	margin-right: auto !important;
 	margin-left: auto !important;
 }
+
+.job-listing {
+	max-height: 25rem;
+	overflow-x: auto;
+}
